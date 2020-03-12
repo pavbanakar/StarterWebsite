@@ -1,0 +1,55 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'vs2017-win2016'
+
+#https://docs.microsoft.com/en-us/azure/devops/pipelines/ecosystems/dotnet-core?view=azure-devops
+
+# https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/3.1/releases.json
+# check this for release version 
+steps:
+  - task: UseDotNet@2
+    displayName: 'Install .NET Core SDK'
+    inputs: 
+      version: '3.1.x'
+      performMultiLevelLookup: true
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore Nuget packages'
+    inputs:
+      command: restore
+      projects: '**/*.csproj'
+      feedToUse: config
+      nugetConfigPath: Nuget.config
+  
+  - task: DotNetCoreCLI@2
+    displayName: 'Build the project'
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration Release'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Run Unit Tests'
+    inputs:
+      command: test
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration Release --collect "Code Coverage"'
+
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish project to staging directory'
+    inputs:
+      command: publish
+      publishWebProjects: True
+      arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
+      zipAfterPublish : True
+  
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: 'websiteName'
+    
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/ecosystems/dotnet-core?view=azure-devops
+
